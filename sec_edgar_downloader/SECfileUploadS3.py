@@ -7,6 +7,7 @@ from sec_edgar_downloader.Downloader import Downloader
 
 # os.listdir(Path.home().joinpath("Downloads"))
 
+# No these are not working AWS keys
 dl = Downloader(s3=True, aws_access_key_id='AKIAZ5MWHWCP5PHNP3G3', aws_secret_access_key='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',
                 bucket_name='secfilesfinal', region_name='eu-west-3')
 dl.get("10-K", "MSFT")

@@ -169,8 +169,8 @@ class Downloader:
         if self.s3:
             # s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
             #                     aws_secret_access_key=self.aws_secrete_access_key)
-            s3 = boto3.resource(service_name='s3', region_name='eu-west-3', aws_access_key_id='AKIAZ5MWHWCPWEH7E7JS',
-                                aws_secret_access_key='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')
+            s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
+                                aws_secret_access_key=self.aws_secrete_access_key)
             if s3 is None or s3 is False:
                 raise ValueError("Can't connect to S3")
 
