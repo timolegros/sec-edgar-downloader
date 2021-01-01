@@ -1,17 +1,20 @@
 """Provides the :class:`Downloader` class, which is used to download SEC filings."""
 
 import sys
+import boto3
+import os
+
 from datetime import date
 from pathlib import Path
 
 from ._constants import SUPPORTED_FILINGS
-from ._utils import download_filings, get_filing_urls_to_download, validate_date_format
+from ._utils import download_filings, download_filings_s3, get_filing_urls_to_download, validate_date_format
 
 
 class Downloader:
     """A :class:`Downloader` object.
 
-    :param download_folder: relative or absolute path to download location,
+    :param download_folder: relative or absolute path to download location, or to S3 bucket
         defaults to the user's ``Downloads`` folder.
     :type download_folder: ``str``, optional
 
@@ -21,8 +24,17 @@ class Downloader:
         >>> dl = Downloader()
     """
 
-    def __init__(self, download_folder=None):
+    def __init__(self, download_folder=None, s3=False, aws_access_key_id=None, aws_secret_access_key=None, region_name=None,
+                 bucket_name=None):
         """Constructor for the :class:`Downloader` class."""
+        if s3:
+            self.s3 = True
+            self.aws_access_key_id = aws_access_key_id
+            self.aws_secrete_access_key = aws_secret_access_key
+            self.region_name = region_name
+            self.bucket_name = bucket_name
+            if self.aws_access_key_id is None or self.aws_secrete_access_key is None or self.region_name is None or self.bucket_name is None:
+                raise ValueError("AWS credentials cannot be None")
         if download_folder is None:
             self.download_folder = Path.home().joinpath("Downloads")
         else:
@@ -153,8 +165,44 @@ class Downloader:
             include_amends,
         )
 
-        download_filings(
-            self.download_folder, ticker_or_cik, filing_type, filings_to_fetch
-        )
+        if self.s3:
+            s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
+                                aws_secret_access_key=self.aws_secrete_access_key)
+            if s3 is None or s3 is False:
+                raise ValueError("Can't connect to S3")
+
+            numFiles = len(filings_to_fetch)
+            remainder = numFiles % 10
+            if remainder == 0:
+                maxIter = numFiles / 10
+            else:
+                maxIter = numFiles // 10
+
+            topFile = 10
+            while topFile <= maxIter * 10:
+                filings = filings_to_fetch[topFile - 10: topFile]
+                download_filings(self.download_folder, ticker_or_cik, filing_type, filings)
+                for file in filings:
+                    s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
+                    os.remove(f"{file.filename}")
+                topFile += 10
+
+            i = 0
+            while i < remainder:
+                file = filings_to_fetch[(maxIter * 10) + i - 1]
+                download_filings(self.download_folder, ticker_or_cik, filing_type, file)
+                s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
+                os.remove(f"{file.filename}")
+                i += 1
+
+        else:
+            download_filings(
+                self.download_folder, ticker_or_cik, filing_type, filings_to_fetch
+            )
 
         return len(filings_to_fetch)
+
+
+# check sql database for 10k filing sentiment rating
+# check s3 bucket for 10k filing then calculate sentiment and add it to sql database
+# if not in s3 bucket run this code to add the file to the bucket
