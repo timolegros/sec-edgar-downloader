@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 
 from ._constants import SUPPORTED_FILINGS
-from ._utils import download_filings, download_filings_s3, get_filing_urls_to_download, validate_date_format
+from ._utils import download_filings, get_filing_urls_to_download, validate_date_format
 
 
 class Downloader:
@@ -35,6 +35,7 @@ class Downloader:
             self.bucket_name = bucket_name
             if self.aws_access_key_id is None or self.aws_secrete_access_key is None or self.region_name is None or self.bucket_name is None:
                 raise ValueError("AWS credentials cannot be None")
+
         if download_folder is None:
             self.download_folder = Path.home().joinpath("Downloads")
         else:
@@ -184,7 +185,8 @@ class Downloader:
                 download_filings(self.download_folder, ticker_or_cik, filing_type, filings)
                 for file in filings:
                     s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
-                    os.remove(f"{file.filename}")
+                    path = self.download_folder.joinpath("sec_edgar_filings", ticker_or_cik, filing_type, file.filename)
+                    os.remove(f"{path}")
                 topFile += 10
 
             i = 0
@@ -192,7 +194,8 @@ class Downloader:
                 file = filings_to_fetch[(maxIter * 10) + i - 1]
                 download_filings(self.download_folder, ticker_or_cik, filing_type, file)
                 s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
-                os.remove(f"{file.filename}")
+                path = self.download_folder.joinpath("sec_edgar_filings", ticker_or_cik, filing_type, file.filename)
+                os.remove(f"{path}")
                 i += 1
 
         else:
