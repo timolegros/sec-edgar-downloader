@@ -165,38 +165,22 @@ class Downloader:
             before_date,
             include_amends,
         )
-
+        print(filings_to_fetch)
         if self.s3:
-            s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
-                                aws_secret_access_key=self.aws_secrete_access_key)
+            # s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
+            #                     aws_secret_access_key=self.aws_secrete_access_key)
+            s3 = boto3.resource(service_name='s3', region_name='eu-west-3', aws_access_key_id='AKIAZ5MWHWCPWEH7E7JS',
+                                aws_secret_access_key='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')
             if s3 is None or s3 is False:
                 raise ValueError("Can't connect to S3")
 
-            numFiles = len(filings_to_fetch)
-            remainder = numFiles % 10
-            if remainder == 0:
-                maxIter = numFiles / 10
-            else:
-                maxIter = numFiles // 10
-
-            topFile = 10
-            while topFile <= maxIter * 10:
-                filings = filings_to_fetch[topFile - 10: topFile]
-                download_filings(self.download_folder, ticker_or_cik, filing_type, filings)
-                for file in filings:
-                    s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
-                    path = self.download_folder.joinpath("sec_edgar_filings", ticker_or_cik, filing_type, file.filename)
-                    os.remove(f"{path}")
-                topFile += 10
-
-            i = 0
-            while i < remainder:
-                file = filings_to_fetch[(maxIter * 10) + i - 1]
-                download_filings(self.download_folder, ticker_or_cik, filing_type, file)
-                s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
+            for file in filings_to_fetch:
+                download_filings(self.download_folder, ticker_or_cik, filing_type, [file])
                 path = self.download_folder.joinpath("sec_edgar_filings", ticker_or_cik, filing_type, file.filename)
+                # s3.Bucket(self.bucket_name).upload_file(Filename=file.filename, Key=file.filename)
+                s3.Bucket(self.bucket_name).upload_file(Filename=str(path), Key=file.filename)
+                print(path)
                 os.remove(f"{path}")
-                i += 1
 
         else:
             download_filings(
