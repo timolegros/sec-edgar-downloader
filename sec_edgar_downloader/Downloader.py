@@ -167,8 +167,6 @@ class Downloader:
         )
         print(filings_to_fetch)
         if self.s3:
-            # s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
-            #                     aws_secret_access_key=self.aws_secrete_access_key)
             s3 = boto3.resource(service_name='s3', region_name=self.region_name, aws_access_key_id=self.aws_access_key_id,
                                 aws_secret_access_key=self.aws_secrete_access_key)
             if s3 is None or s3 is False:
